@@ -1,0 +1,168 @@
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { SpiderLogo } from "@/components/SpiderLogo";
+import spiderHeroBg from "@/assets/spider-hero-bg.jpg";
+import { login } from "@/controllers/appController";
+import { loginApi } from "@/services/backendApi";
+
+const Login = () => {
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const PHONE_RE = /^\+254[0-9]{9}$/;
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!phone || !password) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!PHONE_RE.test(phone)) {
+      toast({
+        title: "Error",
+        description: "Phone must be in +2547XXXXXXXX format",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (password.length < 8) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 8 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const user = await loginApi(phone, password);
+      login({ id: user.id, phone: user.phone, name: user.name ?? undefined, role: user.role });
+      toast({
+        title: "Welcome to SPIDER",
+        description: "Login successful!",
+      });
+      navigate("/dashboard");
+    } catch (error) {
+      const err = error as { statusCode?: number; message?: string };
+      toast({
+        title: "Login failed",
+        description: err.message ?? "Unable to login right now",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{
+        backgroundImage: `url(${spiderHeroBg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed'
+      }}
+    >
+      {/* Animated spider web overlay */}
+      <div className="absolute inset-0 spider-web-bg opacity-30" />
+      
+      {/* Gradient overlay for better text readability */}
+      <div className="absolute inset-0 bg-gradient-to-br from-navy-dark/95 via-navy-dark/85 to-primary/75" />
+      
+      <div className="w-full max-w-md animate-fade-in relative z-10">
+        <div className="glass-form rounded-2xl p-8 shadow-2xl glow">
+          <div className="flex flex-col items-center mb-8">
+            <div className="mb-4 animate-scale-in">
+              <SpiderLogo size="lg" className="transition-transform duration-500 hover:rotate-12" />
+            </div>
+            <h1 className="text-3xl font-bold gradient-text uppercase tracking-[0.3em]">
+              SPIDER
+            </h1>
+            <p className="text-foreground/70 mt-2 text-sm tracking-wide">
+              Stay connected in the web
+            </p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="phone" className="text-foreground font-medium">
+                Phone Number
+              </Label>
+              <Input
+                id="phone"
+                type="text"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+254712345678"
+                className="glass-input"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-foreground font-medium">
+                Password
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                className="glass-input"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-primary-foreground font-semibold py-6 rounded-xl hover-scale glow transition-all duration-300 uppercase tracking-wider"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="animate-spin">⚡</span>
+                  Logging in...
+                </span>
+              ) : (
+                "Login"
+              )}
+            </Button>
+          </form>
+
+          <div className="mt-6 text-center space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Use your registered phone (+2547XXXXXXXX) and password
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Don't have an account?{" "}
+              <Link 
+                to="/signup" 
+                className="text-primary hover:text-secondary transition-colors font-medium"
+              >
+                Sign up here
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Login;

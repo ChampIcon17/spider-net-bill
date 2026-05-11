@@ -1,0 +1,224 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* SPIDER Wi-Fi Billing System Design System */
+
+@layer base {
+  :root {
+    /* SPIDER Brand Colors - Royal Blue Theme */
+    --royal-blue: 225 73% 57%; /* #4169E1 */
+    --light-blue: 195 100% 47%; /* #00AEEF */
+    --navy-dark: 220 67% 8%; /* #0B1120 */
+    --accent-orange: 30 100% 50%; /* #FF8800 */
+    
+    /* Spider Logo Colors - Red Theme */
+    --spider-red: 0 85% 55%; /* #E62E2E */
+    --spider-red-dark: 0 75% 45%; /* #CC1F1F */
+    --web-gray: 0 0% 85%; /* #D9D9D9 */
+    
+    /* Glassmorphism Form Variables */
+    --form-glass-bg: 0 0% 100% / 0.08;
+    --form-glass-border: 225 73% 57% / 0.3;
+    --form-input-bg: 0 0% 100% / 0.06;
+    --form-blur: 12px;
+    --form-border-width: 1px;
+    --form-radius: 12px;
+    --form-shadow: 0 8px 30px hsl(220 67% 8% / 0.35);
+    
+    /* Light Mode */
+    --background: 0 0% 96%; /* #F5F5F5 */
+    --foreground: 220 67% 8%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 67% 8%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 67% 8%;
+
+    --primary: 225 73% 57%; /* Royal Blue */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 195 100% 47%; /* Light Blue */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 13% 91%;
+    --muted-foreground: 220 9% 46%;
+
+    --accent: 30 100% 50%; /* Orange */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 225 73% 57%;
+
+    --radius: 0.75rem;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(225 73% 57%), hsl(220 67% 8%));
+    --gradient-glow: linear-gradient(135deg, hsl(225 73% 57% / 0.2), hsl(195 100% 47% / 0.2));
+    
+    /* Shadows & Effects */
+    --shadow-glow: 0 0 20px hsl(225 73% 57% / 0.3);
+    --shadow-card: 0 4px 20px hsl(220 67% 8% / 0.1);
+    --glass-bg: hsl(0 0% 100% / 0.08);
+    --glass-border: hsl(225 73% 57% / 0.3);
+  }
+
+  .dark {
+    --background: 220 67% 8%; /* Navy Dark */
+    --foreground: 0 0% 100%;
+
+    --card: 220 50% 12%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 220 50% 12%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 225 73% 57%; /* Royal Blue */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 195 100% 47%; /* Light Blue */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 50% 15%;
+    --muted-foreground: 220 9% 65%;
+
+    --accent: 30 100% 50%; /* Orange */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 50% 15%;
+    --input: 220 50% 15%;
+    --ring: 225 73% 57%;
+
+    /* Dark Mode Adjustments */
+    --shadow-glow: 0 0 30px hsl(225 73% 57% / 0.5);
+    --shadow-card: 0 4px 30px hsl(220 67% 8% / 0.5);
+    --glass-bg: hsl(220 50% 12% / 0.12);
+    --glass-border: hsl(225 73% 57% / 0.4);
+    
+    /* Glassmorphism Form Variables - Dark Mode */
+    --form-glass-bg: 220 50% 12% / 0.12;
+    --form-glass-border: 225 73% 57% / 0.4;
+    --form-input-bg: 220 50% 12% / 0.08;
+    --form-shadow: 0 8px 30px hsl(220 67% 8% / 0.5);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-['Poppins',sans-serif];
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-wide;
+  }
+}
+
+@layer components {
+  /* Glassmorphism Effect */
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+  }
+
+  /* Glow Effect */
+  .glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  /* Spider Web Pattern Background */
+  .spider-web-bg {
+    background-image: 
+      radial-gradient(circle at center, transparent 0%, transparent 50%, hsl(225 73% 57% / 0.03) 50%, hsl(225 73% 57% / 0.03) 100%),
+      linear-gradient(90deg, hsl(225 73% 57% / 0.05) 1px, transparent 1px),
+      linear-gradient(hsl(225 73% 57% / 0.05) 1px, transparent 1px),
+      linear-gradient(45deg, hsl(195 100% 47% / 0.03) 1px, transparent 1px),
+      linear-gradient(-45deg, hsl(195 100% 47% / 0.03) 1px, transparent 1px);
+    background-size: 100px 100px, 50px 50px, 50px 50px, 70px 70px, 70px 70px;
+    animation: web-shimmer 20s linear infinite;
+  }
+
+  @keyframes web-shimmer {
+    0% {
+      background-position: 0 0, 0 0, 0 0, 0 0, 0 0;
+    }
+    100% {
+      background-position: 100px 100px, 50px 50px, 50px 50px, 70px 70px, 70px 70px;
+    }
+  }
+
+  /* Hover Scale Animation */
+  .hover-scale {
+    @apply transition-transform duration-300 hover:scale-105;
+  }
+
+  /* Gradient Text */
+  .gradient-text {
+    background: linear-gradient(135deg, hsl(225 73% 57%), hsl(195 100% 47%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Enhanced Glassmorphism Form Styles */
+  .glass-form {
+    background: hsl(var(--form-glass-bg));
+    border: var(--form-border-width) solid hsl(var(--form-glass-border));
+    border-radius: var(--form-radius);
+    box-shadow: var(--form-shadow);
+    backdrop-filter: blur(var(--form-blur)) saturate(120%);
+    -webkit-backdrop-filter: blur(var(--form-blur)) saturate(120%);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-form:focus-within {
+    box-shadow: 0 12px 38px hsl(220 67% 8% / 0.5), 0 0 0 3px hsl(225 73% 57% / 0.08);
+    transform: translateY(-2px);
+  }
+
+  .glass-input {
+    background: hsl(var(--form-input-bg));
+    border: var(--form-border-width) solid hsl(var(--form-glass-border));
+    border-radius: 10px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: all 0.18s ease;
+  }
+
+  .glass-input:focus {
+    box-shadow: 0 4px 18px hsl(225 73% 57% / 0.15);
+    transform: translateY(-1px);
+    border-color: hsl(225 73% 57%);
+  }
+
+  /* Fallback for browsers without backdrop-filter support */
+  @supports not (backdrop-filter: blur(1px)) {
+    .glass-form {
+      background: hsl(var(--background));
+      opacity: 0.95;
+    }
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}

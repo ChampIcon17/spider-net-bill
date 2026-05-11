@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum SessionStatus {
+  ACTIVE
+  EXPIRED
+  TERMINATED
+}
+
+model User {
+  id             String         @id @default(uuid())
+  phone          String         @unique
+  hashedPassword String
+  name           String?
+  role           Role           @default(USER)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  sessions       Session[]
+  payments       Payment[]
+  devices        Device[]
+  refreshTokens  RefreshToken[]
+
+  @@index([phone])
+}
+
+model Plan {
+  id            String    @id @default(uuid())
+  name          String
+  durationHours Int
+  price         Decimal   @db.Decimal(10, 2)
+  speedLimit    String
+  isActive      Boolean   @default(true)
+  sessions      Session[]
+  payments      Payment[]
+}
+
+model Session {
+  id         String        @id @default(uuid())
+  userId     String
+  planId     String
+  macAddress String
+  ipAddress  String?
+  status     SessionStatus @default(ACTIVE)
+  startedAt  DateTime      @default(now())
+  expiresAt  DateTime
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan       Plan          @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([userId, status])
+  @@index([expiresAt])
+}
+
+model Payment {
+  id                 String        @id @default(uuid())
+  userId             String
+  planId             String
+  amount             Decimal       @db.Decimal(10, 2)
+  mpesaReceiptNumber String?
+  checkoutRequestId  String?       @unique
+  status             PaymentStatus @default(PENDING)
+  createdAt          DateTime      @default(now())
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan               Plan          @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([checkoutRequestId])
+  @@index([userId])
+}
+
+model Device {
+  id         String   @id @default(uuid())
+  userId     String
+  macAddress String   @unique
+  label      String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+}
