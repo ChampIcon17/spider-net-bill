@@ -1,6 +1,10 @@
 {
   "name": "vite_react_shadcn_ts",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/WILSON-MWANGI-WAMBUI/spider-net-bill.git"
+  },
   "version": "0.0.0",
   "type": "module",
   "scripts": {

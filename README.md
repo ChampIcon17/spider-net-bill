@@ -1,8 +1,10 @@
-# Welcome to your Lovable project
+# SPIDER — Wi‑Fi billing (frontend + backend)
 
 ## Project info
 
-**URL**: https://lovable.dev/projects/89009f76-9e6e-4318-9d3a-693f06c8d70a
+**GitHub repository**: https://github.com/WILSON-MWANGI-WAMBUI/spider-net-bill
+
+**Lovable (optional)**: https://lovable.dev/projects/89009f76-9e6e-4318-9d3a-693f06c8d70a
 
 ## How can I edit this code?
 
@@ -23,11 +25,11 @@ The only requirement is having Node.js & npm installed - [install with nvm](http
 Follow these steps:
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Step 1: Clone the repository.
+git clone https://github.com/WILSON-MWANGI-WAMBUI/spider-net-bill.git
 
 # Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+cd spider-net-bill
 
 # Step 3: Install the necessary dependencies.
 npm i
