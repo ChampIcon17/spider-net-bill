@@ -1,14 +1,22 @@
-import { ConflictException, HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
+import { HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PaymentStatus, SessionStatus } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
-import { createHmac, timingSafeEqual } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { RedisService } from "../redis/redis.service";
+import { KENYAN_E164_RE, toKenyanE164 } from "../common/utils/phone.util";
 import { DarajaService } from "./daraja/daraja.service";
+import {
+  amountsMatch,
+  isStkCallbackSuccess,
+  parseStkCallbackBody,
+  verifyWebhookSignature,
+} from "./daraja/daraja.sdk";
 import { MikroTikService } from "../mikrotik/mikrotik.service";
 import { InitiatePaymentDto } from "./dto/initiate-payment.dto";
 import type { StkCallbackBody } from "./daraja/daraja.types";
+
+const PENDING_REDIS_TTL_SEC = 86_400;
 
 @Injectable()
 export class PaymentsService {
@@ -22,60 +30,144 @@ export class PaymentsService {
     private readonly config: ConfigService,
   ) {}
 
-  private toPartyA(e164: string): string {
-    return e164.replace(/^\+/, "");
+  private resolvePayPhone(dtoPhone: string | undefined, userPhone: string): string {
+    const raw = dtoPhone ?? userPhone;
+    const normalized = toKenyanE164(raw);
+    if (typeof normalized !== "string" || !KENYAN_E164_RE.test(normalized)) {
+      throw new HttpException("Phone required for payment", HttpStatus.BAD_REQUEST);
+    }
+    return normalized;
   }
 
-  async initiate(userId: string, userPhone: string, dto: InitiatePaymentDto) {
+  private async findIdempotentInitiate(
+    userId: string,
+    idempotencyKey: string,
+  ): Promise<{ checkoutRequestId: string; message: string } | null> {
+    const existing = await this.prisma.payment.findUnique({
+      where: { idempotencyKey },
+    });
+    if (!existing || existing.userId !== userId) return null;
+
+    if (existing.status === PaymentStatus.FAILED) {
+      await this.prisma.payment.delete({ where: { id: existing.id } });
+      return null;
+    }
+
+    if (existing.checkoutRequestId) {
+      return {
+        checkoutRequestId: existing.checkoutRequestId,
+        message: "STK Push sent. Enter M-Pesa PIN.",
+      };
+    }
+    return null;
+  }
+
+  async initiate(
+    userId: string,
+    userPhone: string,
+    dto: InitiatePaymentDto,
+    idempotencyKey?: string,
+  ) {
+    if (idempotencyKey) {
+      const cached = await this.findIdempotentInitiate(userId, idempotencyKey);
+      if (cached) return cached;
+    }
+
     const plan = await this.prisma.plan.findUnique({ where: { id: dto.planId } });
     if (!plan?.isActive) {
       throw new HttpException("Invalid or inactive plan", HttpStatus.BAD_REQUEST);
     }
 
-    const active = await this.prisma.session.findFirst({
-      where: {
+    const payPhone = this.resolvePayPhone(dto.phone, userPhone);
+    const amount = Number(plan.price);
+
+    const payment = await this.prisma.payment.create({
+      data: {
         userId,
+        planId: plan.id,
         macAddress: dto.macAddress,
-        status: SessionStatus.ACTIVE,
-        expiresAt: { gt: new Date() },
+        amount: new Decimal(amount),
+        status: PaymentStatus.PENDING,
+        idempotencyKey: idempotencyKey ?? null,
       },
     });
-    if (active) {
-      throw new ConflictException("Already connected for this device");
-    }
 
-    const payPhone = dto.phone ?? userPhone;
-    if (!payPhone?.startsWith("+254")) {
-      throw new HttpException("Phone required for payment", HttpStatus.BAD_REQUEST);
-    }
-
-    const amount = Number(plan.price);
-    let stk;
+    let stk: { checkoutRequestId: string; merchantRequestId: string };
     try {
-      stk = await this.daraja.stkPush(amount, this.toPartyA(payPhone), `plan:${plan.id}`);
+      stk = await this.daraja.stkPush(amount, payPhone, plan.id);
     } catch (e) {
+      await this.prisma.payment.update({
+        where: { id: payment.id },
+        data: { status: PaymentStatus.FAILED },
+      });
       if (e instanceof HttpException) throw e;
       throw new HttpException("Payment gateway unavailable", HttpStatus.SERVICE_UNAVAILABLE);
     }
 
-    const checkoutRequestId = stk.CheckoutRequestID;
-    await this.prisma.payment.create({
-      data: {
-        userId,
-        planId: plan.id,
-        amount: new Decimal(amount),
-        checkoutRequestId,
-        status: PaymentStatus.PENDING,
-      },
+    await this.prisma.payment.update({
+      where: { id: payment.id },
+      data: { checkoutRequestId: stk.checkoutRequestId },
     });
 
     const payload = JSON.stringify({ userId, planId: plan.id, macAddress: dto.macAddress });
-    await this.redis.getClient().set(`payment:pending:${checkoutRequestId}`, payload, "EX", 300);
+    await this.redis
+      .getClient()
+      .set(`payment:pending:${stk.checkoutRequestId}`, payload, "EX", PENDING_REDIS_TTL_SEC);
 
     return {
-      checkoutRequestId,
+      checkoutRequestId: stk.checkoutRequestId,
       message: "STK Push sent. Enter M-Pesa PIN.",
     };
+  }
+
+  private async provisionSession(
+    paymentId: string,
+    userId: string,
+    planId: string,
+    macAddress: string,
+    durationHours: number,
+    speedLimit: string,
+  ): Promise<void> {
+    const extensionMs = durationHours * 60 * 60 * 1000;
+    const now = new Date();
+
+    await this.prisma.$transaction(async (tx) => {
+      const payment = await tx.payment.findUnique({ where: { id: paymentId } });
+      if (!payment || payment.provisionedAt) return;
+
+      const existing = await tx.session.findFirst({
+        where: {
+          userId,
+          macAddress,
+          status: SessionStatus.ACTIVE,
+          expiresAt: { gt: now },
+        },
+      });
+
+      if (existing) {
+        await tx.session.update({
+          where: { id: existing.id },
+          data: { expiresAt: new Date(existing.expiresAt.getTime() + extensionMs) },
+        });
+      } else {
+        await tx.session.create({
+          data: {
+            userId,
+            planId,
+            macAddress,
+            status: SessionStatus.ACTIVE,
+            expiresAt: new Date(now.getTime() + extensionMs),
+          },
+        });
+      }
+
+      await tx.payment.update({
+        where: { id: paymentId },
+        data: { provisionedAt: now },
+      });
+    });
+
+    await this.mikrotik.connectUser(macAddress, speedLimit);
   }
 
   async handleStkCallback(
@@ -87,28 +179,27 @@ export class PaymentsService {
       return;
     }
 
-    const cb = raw.Body?.stkCallback;
-    if (!cb) {
+    const parsed = parseStkCallbackBody(raw);
+    if (!parsed) {
       this.logger.warn("No stkCallback in body");
       return;
     }
 
-    const checkoutRequestId = cb.CheckoutRequestID;
     const payment = await this.prisma.payment.findUnique({
-      where: { checkoutRequestId },
+      where: { checkoutRequestId: parsed.checkoutRequestId },
       include: { plan: true },
     });
     if (!payment) {
-      this.logger.warn(`Payment not found for ${checkoutRequestId}`);
+      this.logger.warn(`Payment not found for ${parsed.checkoutRequestId}`);
       return;
     }
 
-    if (payment.status === PaymentStatus.SUCCESS) {
-      this.logger.debug(`Ignoring duplicate callback for ${checkoutRequestId}`);
+    if (payment.status === PaymentStatus.SUCCESS && payment.provisionedAt) {
+      this.logger.debug(`Ignoring duplicate callback for ${parsed.checkoutRequestId}`);
       return;
     }
 
-    if (cb.ResultCode !== 0) {
+    if (!isStkCallbackSuccess(parsed.resultCode)) {
       await this.prisma.payment.updateMany({
         where: { id: payment.id, status: PaymentStatus.PENDING },
         data: { status: PaymentStatus.FAILED },
@@ -116,66 +207,46 @@ export class PaymentsService {
       return;
     }
 
-    const items = cb.CallbackMetadata?.Item ?? [];
-    let mpesaReceipt = "";
-    for (const it of items) {
-      if (it.Name === "MpesaReceiptNumber") {
-        mpesaReceipt = String(it.Value ?? "");
+    const expectedAmount = Number(payment.amount);
+    if (!amountsMatch(expectedAmount, parsed.metadata.amount)) {
+      this.logger.warn(
+        `Amount mismatch for ${parsed.checkoutRequestId}: expected=${expectedAmount} received=${parsed.metadata.amount}`,
+      );
+      await this.prisma.payment.updateMany({
+        where: { id: payment.id, status: PaymentStatus.PENDING },
+        data: { status: PaymentStatus.FAILED },
+      });
+      return;
+    }
+
+    if (!payment.provisionedAt) {
+      try {
+        await this.provisionSession(
+          payment.id,
+          payment.userId,
+          payment.planId,
+          payment.macAddress,
+          payment.plan.durationHours,
+          payment.plan.speedLimit,
+        );
+      } catch (e) {
+        this.logger.error(
+          `Provisioning failed for ${parsed.checkoutRequestId}`,
+          e instanceof Error ? e.stack : e,
+        );
+        return;
       }
     }
 
-    const updateResult = await this.prisma.payment.updateMany({
+    await this.prisma.payment.updateMany({
       where: { id: payment.id, status: { not: PaymentStatus.SUCCESS } },
       data: {
         status: PaymentStatus.SUCCESS,
-        mpesaReceiptNumber: mpesaReceipt || null,
-      },
-    });
-    if (updateResult.count === 0) {
-      this.logger.debug(`Payment already processed for ${checkoutRequestId}`);
-      return;
-    }
-
-    const pendingRaw = await this.redis.getClient().get(`payment:pending:${checkoutRequestId}`);
-    if (!pendingRaw) {
-      this.logger.warn(`No pending payment context for ${checkoutRequestId}`);
-      return;
-    }
-    let pending: { userId: string; planId: string; macAddress: string };
-    try {
-      pending = JSON.parse(pendingRaw) as typeof pending;
-    } catch {
-      return;
-    }
-
-    const plan = payment.plan;
-    const expiresAt = new Date(Date.now() + plan.durationHours * 60 * 60 * 1000);
-    const existing = await this.prisma.session.findFirst({
-      where: {
-        userId: pending.userId,
-        macAddress: pending.macAddress,
-        status: SessionStatus.ACTIVE,
-        expiresAt: { gt: new Date() },
-      },
-    });
-    if (existing) {
-      this.logger.warn(`Active session already exists for mac=${pending.macAddress}`);
-      await this.redis.getClient().del(`payment:pending:${checkoutRequestId}`);
-      return;
-    }
-
-    await this.prisma.session.create({
-      data: {
-        userId: pending.userId,
-        planId: plan.id,
-        macAddress: pending.macAddress,
-        status: SessionStatus.ACTIVE,
-        expiresAt,
+        mpesaReceiptNumber: parsed.metadata.mpesaReceiptNumber ?? null,
       },
     });
 
-    await this.mikrotik.connectUser(pending.macAddress, plan.speedLimit);
-    await this.redis.getClient().del(`payment:pending:${checkoutRequestId}`);
+    await this.redis.getClient().del(`payment:pending:${parsed.checkoutRequestId}`);
   }
 
   private normalizeIp(ip: string): string {
@@ -217,18 +288,6 @@ export class PaymentsService {
     return false;
   }
 
-  private isSignatureValid(signature: string | undefined, rawBody: string | undefined): boolean {
-    const secret = this.config.get<string>("DARAJA_WEBHOOK_SECRET") ?? "";
-    if (!secret) return false;
-    if (!signature || !rawBody) return false;
-    const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
-    const incoming = signature.toLowerCase();
-    const expectedBuf = Buffer.from(expected);
-    const incomingBuf = Buffer.from(incoming);
-    if (expectedBuf.length !== incomingBuf.length) return false;
-    return timingSafeEqual(expectedBuf, incomingBuf);
-  }
-
   private validateWebhookSource(ip: string, signature?: string, rawBody?: string): boolean {
     const bypass = this.config.get<string>("DARAJA_WEBHOOK_BYPASS") === "true";
     if (bypass) {
@@ -236,8 +295,9 @@ export class PaymentsService {
       return true;
     }
 
+    const secret = this.config.get<string>("DARAJA_WEBHOOK_SECRET") ?? "";
     const ipAllowed = this.isIpAllowed(ip);
-    const signatureValid = this.isSignatureValid(signature, rawBody);
+    const signatureValid = verifyWebhookSignature(secret, signature, rawBody);
     return ipAllowed || signatureValid;
   }
 

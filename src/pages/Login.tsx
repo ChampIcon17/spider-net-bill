@@ -15,7 +15,13 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const PHONE_RE = /^\+254[0-9]{9}$/;
+  const toE164 = (value: string): string => {
+    const cleaned = value.replace(/\s+/g, "");
+    if (cleaned.startsWith("+254")) return cleaned;
+    if (cleaned.startsWith("254")) return `+${cleaned}`;
+    if (cleaned.startsWith("0")) return `+254${cleaned.slice(1)}`;
+    return cleaned;
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,10 +35,14 @@ const Login = () => {
       return;
     }
 
-    if (!PHONE_RE.test(phone)) {
+    const cleaned = phone.replace(/\s+/g, "");
+    const normalizedPhone = toE164(cleaned);
+    const isValidKePhone =
+      /^07[0-9]{8}$/.test(cleaned) || /^\+2547[0-9]{8}$/.test(normalizedPhone);
+    if (!isValidKePhone) {
       toast({
         title: "Error",
-        description: "Phone must be in +2547XXXXXXXX format",
+        description: "Use a valid Kenyan number e.g. 0712345678",
         variant: "destructive",
       });
       return;
@@ -50,7 +60,7 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const user = await loginApi(phone, password);
+      const user = await loginApi(normalizedPhone, password);
       login({ id: user.id, phone: user.phone, name: user.name ?? undefined, role: user.role });
       toast({
         title: "Welcome to SPIDER",
@@ -110,7 +120,7 @@ const Login = () => {
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="+254712345678"
+                placeholder="0712345678"
                 className="glass-input"
               />
             </div>
@@ -147,7 +157,7 @@ const Login = () => {
 
           <div className="mt-6 text-center space-y-2">
             <p className="text-sm text-muted-foreground">
-              Use your registered phone (+2547XXXXXXXX) and password
+              Use your registered phone (07XXXXXXXXX) and password
             </p>
             <p className="text-sm text-muted-foreground">
               Don't have an account?{" "}

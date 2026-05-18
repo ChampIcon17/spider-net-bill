@@ -60,11 +60,14 @@ export const PaymentModal = ({ isOpen, onClose, plan }: PaymentModalProps) => {
   }, [hasActiveBundle, isOpen]);
 
   const handlePayment = async () => {
-    const phone = toE164(phoneNumber);
-    if (!/^\+254[0-9]{9}$/.test(phone)) {
+    const cleaned = phoneNumber.replace(/\s+/g, "");
+    const phone = toE164(cleaned);
+    const isValidKePhone =
+      /^07[0-9]{8}$/.test(cleaned) || /^\+2547[0-9]{8}$/.test(phone);
+    if (!isValidKePhone) {
       toast({
         title: "Invalid Phone Number",
-        description: "Use a valid Kenyan number e.g. +254712345678",
+        description: "Use a valid Kenyan number e.g. 0712345678",
         variant: "destructive",
       });
       return;

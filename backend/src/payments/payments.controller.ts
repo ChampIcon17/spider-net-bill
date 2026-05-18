@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, Logger, Post, Req, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpCode,
+  Logger,
+  Post,
+  Req,
+  UseGuards,
+} from "@nestjs/common";
 import { SkipThrottle } from "@nestjs/throttler";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
@@ -7,6 +17,8 @@ import { PaymentsService } from "./payments.service";
 import { InitiatePaymentDto } from "./dto/initiate-payment.dto";
 import type { Request } from "express";
 import type { StkCallbackBody } from "./daraja/daraja.types";
+
+type RequestWithRawBody = Request & { rawBody?: Buffer };
 
 @Controller("payments")
 export class PaymentsController {
@@ -17,27 +29,30 @@ export class PaymentsController {
   @Post("initiate")
   @HttpCode(202)
   @UseGuards(JwtAuthGuard)
-  initiate(@CurrentUser() user: RequestUser, @Body() dto: InitiatePaymentDto) {
-    return this.payments.initiate(user.sub, user.phone, dto);
+  initiate(
+    @CurrentUser() user: RequestUser,
+    @Body() dto: InitiatePaymentDto,
+    @Headers("idempotency-key") idempotencyKey?: string,
+  ) {
+    return this.payments.initiate(user.sub, user.phone, dto, idempotencyKey);
   }
 
   @Post("webhook")
   @SkipThrottle()
   @HttpCode(200)
-  async webhook(@Body() body: StkCallbackBody, @Req() req: Request) {
+  async webhook(@Body() body: StkCallbackBody, @Req() req: RequestWithRawBody) {
     try {
       const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ?? req.ip ?? "";
       const signatureHeader =
         (req.headers["x-daraja-signature"] as string | undefined) ??
         (req.headers["x-callback-signature"] as string | undefined);
-      const rawBody = typeof req.body === "string" ? req.body : JSON.stringify(body);
+      const rawBody = req.rawBody?.toString("utf8") ?? JSON.stringify(body);
       await this.payments.handleStkCallback(body, {
         requestIp: ip,
         signature: signatureHeader,
         rawBody,
       });
     } catch (e) {
-      /* errors logged inside service; Daraja must still get 200 */
       this.logger.error("webhook internal error", e instanceof Error ? e.stack : e);
     }
     return { ResultCode: 0, ResultDesc: "Accepted" };

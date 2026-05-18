@@ -71,16 +71,20 @@ model Payment {
   id                 String        @id @default(uuid())
   userId             String
   planId             String
+  macAddress         String
   amount             Decimal       @db.Decimal(10, 2)
   mpesaReceiptNumber String?
   checkoutRequestId  String?       @unique
+  idempotencyKey     String?       @unique
   status             PaymentStatus @default(PENDING)
+  provisionedAt      DateTime?
   createdAt          DateTime      @default(now())
   user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   plan               Plan          @relation(fields: [planId], references: [id], onDelete: Restrict)
 
   @@index([checkoutRequestId])
   @@index([userId])
+  @@index([idempotencyKey])
 }
 
 model Device {
