@@ -129,8 +129,8 @@
   /* Glassmorphism Effect */
   .glass {
     background: var(--glass-bg);
-    backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
     border: 1px solid var(--glass-border);
   }
 
@@ -179,8 +179,8 @@
     border: var(--form-border-width) solid hsl(var(--form-glass-border));
     border-radius: var(--form-radius);
     box-shadow: var(--form-shadow);
-    backdrop-filter: blur(var(--form-blur)) saturate(120%);
     -webkit-backdrop-filter: blur(var(--form-blur)) saturate(120%);
+    backdrop-filter: blur(var(--form-blur)) saturate(120%);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
@@ -193,8 +193,8 @@
     background: hsl(var(--form-input-bg));
     border: var(--form-border-width) solid hsl(var(--form-glass-border));
     border-radius: 10px;
-    backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
     transition: all 0.18s ease;
   }
 
@@ -211,6 +211,25 @@
       opacity: 0.95;
     }
   }
+
+  /* Auth pages (Login / SignUp) hero background */
+  .auth-hero-page {
+    background-image: url("./assets/spider-hero-bg.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+  }
+
+  /* Dashboard decorative blobs — staggered pulse */
+  .dashboard-blob-delay-1 {
+    animation-delay: 1s;
+  }
+
+  .dashboard-blob-delay-2 {
+    animation-delay: 2s;
+  }
+
 }
 
 @layer base {

@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { SpiderLogo } from "@/components/SpiderLogo";
-import spiderHeroBg from "@/assets/spider-hero-bg.jpg";
 import { z } from "zod";
 import { login } from "@/controllers/appController";
 import { registerApi } from "@/services/backendApi";
@@ -80,14 +79,7 @@ const SignUp = () => {
 
   return (
     <div 
-      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
-      style={{
-        backgroundImage: `url(${spiderHeroBg})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed'
-      }}
+      className="auth-hero-page min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
     >
       {/* Animated spider web overlay */}
       <div className="absolute inset-0 spider-web-bg opacity-30" />

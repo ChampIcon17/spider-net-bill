@@ -1,5 +1,7 @@
 {
   "terminal.integrated.env.windows": {
     "Path": "${env:LOCALAPPDATA}\\spider-net-bill-tools\\node-v22.14.0-win-x64;C:\\Program Files\\Git\\bin;C:\\Program Files\\nodejs;${env:Path}"
-  }
+  },
+  "css.lint.unknownAtRules": "ignore",
+  "scss.lint.unknownAtRules": "ignore"
 }

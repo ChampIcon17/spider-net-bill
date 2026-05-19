@@ -71,12 +71,12 @@ export const SpiderLogo = ({ size = "md", className }: SpiderLogoProps) => {
         {/* Gradients */}
         <defs>
           <radialGradient id="spiderRedGradient" cx="40%" cy="40%">
-            <stop offset="0%" style={{ stopColor: "hsl(0 85% 60%)", stopOpacity: 1 }} />
-            <stop offset="100%" style={{ stopColor: "hsl(0 85% 45%)", stopOpacity: 1 }} />
+            <stop offset="0%" stopColor="hsl(0 85% 60%)" stopOpacity={1} />
+            <stop offset="100%" stopColor="hsl(0 85% 45%)" stopOpacity={1} />
           </radialGradient>
           <radialGradient id="spiderRedDarkGradient" cx="40%" cy="40%">
-            <stop offset="0%" style={{ stopColor: "hsl(0 75% 50%)", stopOpacity: 1 }} />
-            <stop offset="100%" style={{ stopColor: "hsl(0 75% 35%)", stopOpacity: 1 }} />
+            <stop offset="0%" stopColor="hsl(0 75% 50%)" stopOpacity={1} />
+            <stop offset="100%" stopColor="hsl(0 75% 35%)" stopOpacity={1} />
           </radialGradient>
         </defs>
       </svg>
