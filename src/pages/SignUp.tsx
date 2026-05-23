@@ -3,11 +3,12 @@ import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { SpiderLogo } from "@/components/SpiderLogo";
 import { z } from "zod";
 import { login } from "@/controllers/appController";
 import { registerApi } from "@/services/backendApi";
+import { toE164 } from "@/lib/phone";
 
 const signUpSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100, "Name must be less than 100 characters"),
@@ -33,36 +34,31 @@ const SignUp = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    const normalized = {
+      ...formData,
+      phone: toE164(formData.phone.replace(/\s+/g, "")),
+    };
+
     try {
-      signUpSchema.parse(formData);
+      signUpSchema.parse(normalized);
       
       setIsLoading(true);
 
-      const user = await registerApi(formData.phone, formData.password, formData.name);
+      const user = await registerApi(normalized.phone, normalized.password, normalized.name);
       login({ id: user.id, phone: user.phone, name: user.name ?? undefined, role: user.role });
-        toast({
-          title: "Account Created!",
-          description: "Welcome to SPIDER network",
-        });
-        navigate("/dashboard");
+      toast.success("Account Created!", { description: "Welcome to SPIDER network" });
+      navigate("/dashboard");
     } catch (error) {
       if (error instanceof z.ZodError) {
-        toast({
-          title: "Validation Error",
-          description: error.errors[0].message,
-          variant: "destructive",
-        });
+        toast.error("Validation Error", { description: error.errors[0].message });
       } else {
         const err = error as { message?: string };
-        toast({
-          title: "Registration failed",
+        toast.error("Registration failed", {
           description: err.message ?? "Unable to create account right now",
-          variant: "destructive",
         });
       }
     } finally {

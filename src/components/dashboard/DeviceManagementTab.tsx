@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Smartphone, Trash2, Edit2, Plus } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -13,88 +13,65 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { saveDevices } from "@/controllers/appController";
-import { useDevices } from "@/ui/hooks/useAppState";
-
-interface Device {
-  id: string;
-  name: string;
-  status: "Active" | "Inactive";
-  addedDate: string;
-}
+import { saveDeviceLabels } from "@/controllers/appController";
+import { useDeviceLabels } from "@/ui/hooks/useAppState";
 
 const MAX_DEVICES = 2;
 
 export const DeviceManagementTab = () => {
-  const devices = useDevices() as Device[];
+  const deviceLabels = useDeviceLabels();
+  const devices = useMemo(
+    () =>
+      Object.entries(deviceLabels).map(([id, name]) => ({
+        id,
+        name,
+        status: "Active" as const,
+        addedDate: "",
+      })),
+    [deviceLabels],
+  );
   const [newDeviceName, setNewDeviceName] = useState("");
-  const [editingDevice, setEditingDevice] = useState<Device | null>(null);
+  const [editingDeviceId, setEditingDeviceId] = useState<string | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const { toast } = useToast();
 
   const handleAddDevice = () => {
     if (!newDeviceName.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a device name",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Please enter a device name" });
       return;
     }
 
     if (devices.length >= MAX_DEVICES) {
-      toast({
-        title: "Device Limit Reached",
+      toast.error("Device Limit Reached", {
         description: `You can only connect ${MAX_DEVICES} devices. Please remove one first.`,
-        variant: "destructive",
       });
       return;
     }
 
-    const newDevice: Device = {
-      id: Date.now().toString(),
-      name: newDeviceName,
-      status: "Active",
-      addedDate: new Date().toLocaleDateString(),
-    };
-
-    saveDevices([...devices, newDevice]);
+    const id = crypto.randomUUID();
+    saveDeviceLabels({ ...deviceLabels, [id]: newDeviceName.trim() });
     setNewDeviceName("");
     setIsAddDialogOpen(false);
-    
-    toast({
-      title: "Device Added",
+    toast.success("Device Added", {
       description: `${newDeviceName} has been connected successfully`,
     });
   };
 
   const handleRemoveDevice = (id: string) => {
-    const device = devices.find(d => d.id === id);
-    saveDevices(devices.filter((d) => d.id !== id));
-    
-    toast({
-      title: "Device Removed",
-      description: `${device?.name} has been disconnected`,
-    });
+    const name = deviceLabels[id];
+    const next = { ...deviceLabels };
+    delete next[id];
+    saveDeviceLabels(next);
+    toast.success("Device Removed", { description: `${name} has been disconnected` });
   };
 
   const handleRenameDevice = () => {
-    if (!editingDevice || !newDeviceName.trim()) return;
-
-    const updatedDevices = devices.map((d) =>
-      d.id === editingDevice.id ? { ...d, name: newDeviceName } : d
-    );
-
-    saveDevices(updatedDevices);
-    setEditingDevice(null);
+    if (!editingDeviceId || !newDeviceName.trim()) return;
+    saveDeviceLabels({ ...deviceLabels, [editingDeviceId]: newDeviceName.trim() });
+    setEditingDeviceId(null);
     setNewDeviceName("");
     setIsEditDialogOpen(false);
-    
-    toast({
-      title: "Device Renamed",
-      description: `Device renamed to ${newDeviceName}`,
-    });
+    toast.success("Device Renamed", { description: `Device renamed to ${newDeviceName}` });
   };
 
   return (
@@ -149,16 +126,17 @@ export const DeviceManagementTab = () => {
             <Smartphone className="w-16 h-16 text-muted-foreground" />
             <div className="text-center">
               <h3 className="text-xl font-semibold mb-2">No Devices Connected</h3>
-              <p className="text-muted-foreground">
-                Add your devices to start managing them
-              </p>
+              <p className="text-muted-foreground">Add your devices to start managing them</p>
             </div>
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {devices.map((device) => (
-            <Card key={device.id} className="glass border-primary/20 hover-scale transition-all duration-300">
+            <Card
+              key={device.id}
+              className="glass border-primary/20 hover-scale transition-all duration-300"
+            >
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
@@ -167,29 +145,29 @@ export const DeviceManagementTab = () => {
                     </div>
                     <div>
                       <CardTitle className="text-xl">{device.name}</CardTitle>
-                      <CardDescription className="text-sm">
-                        Added: {device.addedDate}
-                      </CardDescription>
+                      {device.addedDate && (
+                        <CardDescription className="text-sm">
+                          Added: {device.addedDate}
+                        </CardDescription>
+                      )}
                     </div>
                   </div>
-                  <Badge
-                    variant={device.status === "Active" ? "default" : "secondary"}
-                    className={device.status === "Active" ? "bg-primary" : ""}
-                  >
-                    {device.status}
-                  </Badge>
+                  <Badge className="bg-primary">{device.status}</Badge>
                 </div>
               </CardHeader>
 
               <CardContent>
                 <div className="flex gap-2">
-                  <Dialog open={isEditDialogOpen && editingDevice?.id === device.id} onOpenChange={setIsEditDialogOpen}>
+                  <Dialog
+                    open={isEditDialogOpen && editingDeviceId === device.id}
+                    onOpenChange={setIsEditDialogOpen}
+                  >
                     <DialogTrigger asChild>
                       <Button
                         variant="outline"
                         className="flex-1 border-primary/30 hover:bg-primary/10"
                         onClick={() => {
-                          setEditingDevice(device);
+                          setEditingDeviceId(device.id);
                           setNewDeviceName(device.name);
                         }}
                       >

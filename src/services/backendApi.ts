@@ -89,3 +89,32 @@ export type PlanDto = {
 export async function listPlansApi(): Promise<PlanDto[]> {
   return apiFetch<PlanDto[]>("/plans", { method: "GET" }, { auth: false, retryOn401: false });
 }
+
+export type SessionMeResponse =
+  | { active: false }
+  | {
+      active: true;
+      id: string;
+      expiresAt: string;
+      startedAt: string;
+      provisionedAt?: string | null;
+      macAddress: string;
+      plan: { name: string; durationHours: number; speedLimit: string };
+    };
+
+export async function getSessionMeApi(): Promise<SessionMeResponse> {
+  return apiFetch<SessionMeResponse>("/sessions/me", { method: "GET" }, { auth: true });
+}
+
+export type PaymentHistoryItem = {
+  id: string;
+  createdAt: string;
+  amount: number | string;
+  status: string;
+  provisionedAt: string | null;
+  plan: { name: string; durationHours?: number };
+};
+
+export async function getPaymentHistoryApi(): Promise<PaymentHistoryItem[]> {
+  return apiFetch<PaymentHistoryItem[]>("/payments/history", { method: "GET" }, { auth: true });
+}

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Receipt } from "lucide-react";
+import { Loader2, Receipt } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -9,19 +9,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useTransactions } from "@/ui/hooks/useAppState";
-
-interface Transaction {
-  id: string;
-  plan: string;
-  duration: string;
-  amount: number;
-  date: string;
-  status: string;
-}
+import { usePaymentHistory } from "@/hooks/usePaymentHistory";
 
 export const TransactionsTab = () => {
-  const transactions = useTransactions() as Transaction[];
+  const { data: payments = [], isLoading } = usePaymentHistory();
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -33,24 +24,33 @@ export const TransactionsTab = () => {
     });
   };
 
+  const statusClass = (status: string) => {
+    if (status === "SUCCESS") return "bg-primary text-primary-foreground";
+    if (status === "FAILED") return "bg-destructive text-destructive-foreground";
+    return "bg-muted text-muted-foreground";
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-bold gradient-text">Transaction History</h2>
-        <p className="text-muted-foreground mt-2">
-          View all your past bundle purchases
-        </p>
+        <p className="text-muted-foreground mt-2">View your M-Pesa payment history</p>
       </div>
 
-      {transactions.length === 0 ? (
+      {isLoading ? (
+        <Card className="glass border-primary/20">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <Loader2 className="w-10 h-10 animate-spin text-primary" />
+            <p className="text-muted-foreground mt-4">Loading transactions…</p>
+          </CardContent>
+        </Card>
+      ) : payments.length === 0 ? (
         <Card className="glass border-primary/20">
           <CardContent className="flex flex-col items-center justify-center py-16 space-y-4">
             <Receipt className="w-16 h-16 text-muted-foreground" />
             <div className="text-center">
               <h3 className="text-xl font-semibold mb-2">No Transactions Yet</h3>
-              <p className="text-muted-foreground">
-                Your purchase history will appear here
-              </p>
+              <p className="text-muted-foreground">Your payment history will appear here</p>
             </div>
           </CardContent>
         </Card>
@@ -67,31 +67,27 @@ export const TransactionsTab = () => {
               <Table>
                 <TableHeader>
                   <TableRow className="border-primary/20 hover:bg-primary/5">
-                    <TableHead className="font-semibold">Plan</TableHead>
-                    <TableHead className="font-semibold">Duration</TableHead>
-                    <TableHead className="font-semibold">Amount</TableHead>
                     <TableHead className="font-semibold">Date</TableHead>
+                    <TableHead className="font-semibold">Plan</TableHead>
+                    <TableHead className="font-semibold">Amount</TableHead>
                     <TableHead className="font-semibold">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.map((transaction) => (
+                  {payments.map((payment) => (
                     <TableRow
-                      key={transaction.id}
+                      key={payment.id}
                       className="border-primary/20 hover:bg-primary/5 transition-colors"
                     >
-                      <TableCell className="font-medium">{transaction.plan}</TableCell>
-                      <TableCell>{transaction.duration}</TableCell>
-                      <TableCell className="font-semibold gradient-text">
-                        KSh {transaction.amount}
-                      </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {formatDate(transaction.date)}
+                        {formatDate(payment.createdAt)}
+                      </TableCell>
+                      <TableCell className="font-medium">{payment.plan.name}</TableCell>
+                      <TableCell className="font-semibold gradient-text">
+                        KES {payment.amount}
                       </TableCell>
                       <TableCell>
-                        <Badge className="bg-primary text-primary-foreground">
-                          {transaction.status}
-                        </Badge>
+                        <Badge className={statusClass(payment.status)}>{payment.status}</Badge>
                       </TableCell>
                     </TableRow>
                   ))}

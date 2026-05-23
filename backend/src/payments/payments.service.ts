@@ -1,9 +1,14 @@
-import { HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
+import {
+  ConflictException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  Logger,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PaymentStatus, SessionStatus } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { PrismaService } from "../prisma/prisma.service";
-import { RedisService } from "../redis/redis.service";
 import { KENYAN_E164_RE, toKenyanE164 } from "../common/utils/phone.util";
 import { DarajaService } from "./daraja/daraja.service";
 import {
@@ -16,15 +21,12 @@ import { MikroTikService } from "../mikrotik/mikrotik.service";
 import { InitiatePaymentDto } from "./dto/initiate-payment.dto";
 import type { StkCallbackBody } from "./daraja/daraja.types";
 
-const PENDING_REDIS_TTL_SEC = 86_400;
-
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly redis: RedisService,
     private readonly daraja: DarajaService,
     private readonly mikrotik: MikroTikService,
     private readonly config: ConfigService,
@@ -81,6 +83,17 @@ export class PaymentsService {
     const payPhone = this.resolvePayPhone(dto.phone, userPhone);
     const amount = Number(plan.price);
 
+    const recent = await this.prisma.payment.findFirst({
+      where: {
+        macAddress: dto.macAddress,
+        status: PaymentStatus.PENDING,
+        createdAt: { gte: new Date(Date.now() - 120_000) },
+      },
+    });
+    if (recent) {
+      throw new ConflictException("Payment already pending");
+    }
+
     const payment = await this.prisma.payment.create({
       data: {
         userId,
@@ -108,11 +121,6 @@ export class PaymentsService {
       where: { id: payment.id },
       data: { checkoutRequestId: stk.checkoutRequestId },
     });
-
-    const payload = JSON.stringify({ userId, planId: plan.id, macAddress: dto.macAddress });
-    await this.redis
-      .getClient()
-      .set(`payment:pending:${stk.checkoutRequestId}`, payload, "EX", PENDING_REDIS_TTL_SEC);
 
     return {
       checkoutRequestId: stk.checkoutRequestId,
@@ -246,7 +254,6 @@ export class PaymentsService {
       },
     });
 
-    await this.redis.getClient().del(`payment:pending:${parsed.checkoutRequestId}`);
   }
 
   private normalizeIp(ip: string): string {

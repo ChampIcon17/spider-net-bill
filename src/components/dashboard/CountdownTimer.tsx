@@ -1,11 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { computeRemainingTime } from "@/domain/billing";
-import { useBundle } from "@/ui/hooks/useAppState";
+import { useSession } from "@/hooks/useSession";
+
+function formatRemaining(totalMs: number): string {
+  const clamped = Math.max(0, totalMs);
+  const totalSeconds = Math.floor(clamped / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(hours).padStart(2, "0")}h ${String(minutes).padStart(2, "0")}m ${String(seconds).padStart(2, "0")}s`;
+}
 
 export const CountdownTimer = () => {
-  const bundle = useBundle();
+  const { data } = useSession();
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
@@ -13,22 +21,19 @@ export const CountdownTimer = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const timeLeft = useMemo(() => {
-    if (!bundle) return null;
-    const remaining = computeRemainingTime(bundle.expiryTime, nowMs);
-    if (remaining.totalMs <= 0) return null;
+  const label = useMemo(() => {
+    if (!data?.active || !data.session) return null;
+    const remaining = new Date(data.session.expiresAt).getTime() - nowMs;
+    if (remaining <= 0) return null;
+    return formatRemaining(remaining);
+  }, [data, nowMs]);
 
-    if (remaining.days > 0) return `${remaining.days}d ${remaining.hours}h left`;
-    if (remaining.hours > 0) return `${remaining.hours}h ${remaining.minutes}m left`;
-    return `${remaining.minutes}m ${remaining.seconds}s left`;
-  }, [bundle, nowMs]);
-
-  if (!timeLeft) return null;
+  if (!label) return null;
 
   return (
     <Badge className="bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold glow animate-glow-pulse">
       <Clock className="w-4 h-4 mr-2" />
-      {timeLeft}
+      {label}
     </Badge>
   );
 };

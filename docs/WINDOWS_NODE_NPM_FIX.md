@@ -1,8 +1,39 @@
-# Fix: `npm run …` fails with `SyntaxError` on `node.exe` / “Could not determine Node.js install directory”
+﻿# Fix: `npm run …` fails with `SyntaxError` on `node.exe` / “Could not determine Node.js install directory”
 
 ## Cursor / VS Code: `npm` is not recognized but `node -v` works
 
 If `where.exe node` points under **Cursor** or **VS Code** (for example `…\Cursor\…\node.exe`) and **`npm` is not found**, you do **not** have a full Node.js install on your PATH. **Install Node.js LTS** (Fix A). This repo also includes **`.vscode/settings.json`**, which prepends `C:\Program Files\Git\bin` and `C:\Program Files\nodejs` to the integrated terminal `Path` so a normal install is found first—**open a new terminal tab** after pulling that file.
+
+## Repo helpers (portable Node + fixed PATH)
+
+This project ships PowerShell helpers under `scripts/`:
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/session-path.ps1` | Dot-source in your terminal to prepend portable Node v22.14.0 (under `%LOCALAPPDATA%\spider-net-bill-tools\`) plus Git and System32. |
+| `scripts/run-dev.ps1` | Session PATH, then `npm run dev` (Vite frontend). |
+| `scripts/run-backend-dev.ps1` | Session PATH, then `npm run start:dev` in `backend/` (NestJS API). |
+
+From the repo root:
+
+```powershell
+. .\scripts\session-path.ps1
+npm ci
+npm run dev
+```
+
+Or use npm wrappers (same scripts):
+
+```powershell
+npm run dev:win
+npm run backend:dev:win
+```
+
+Install portable Node once (if you do not use Program Files Node):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install-portable-node.ps1
+```
 
 ## What went wrong
 
@@ -71,6 +102,8 @@ Prepend a known-good Node directory **for this session only**:
 $env:Path = "C:\Program Files\Git\bin;C:\Program Files\nodejs;" + $env:Path
 ```
 
+Or dot-source `.\scripts\session-path.ps1` for this repo’s portable Node layout.
+
 Then run `npm run lint` again.
 
 ## After PATH is sane
@@ -79,6 +112,7 @@ From the project root:
 
 ```powershell
 cd C:\Users\USER\OneDrive\Desktop\spider-net-bill-main
+. .\scripts\session-path.ps1
 npm ci
 npm run lint
 ```
@@ -90,3 +124,5 @@ cd backend
 npm ci
 npm run lint
 ```
+
+Frontend env: copy `.env.local.example` to `.env.local` and set `VITE_API_URL` (see root `README.md`). Backend: copy `backend/.env.example` to `backend/.env` (never commit `.env`).

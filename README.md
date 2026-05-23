@@ -1,75 +1,62 @@
-# SPIDER — Wi‑Fi billing (frontend + backend)
+﻿# SPIDER — Wi‑Fi billing (frontend + backend)
 
-## Project info
+React (Vite) dashboard that talks to a **NestJS** API (`backend/`). Plans, devices, M-Pesa payments, and sessions are loaded from the API via React Query hooks—not client-side mock billing services.
 
-**GitHub repository**: https://github.com/WILSON-MWANGI-WAMBUI/spider-net-bill
+**GitHub**: https://github.com/WILSON-MWANGI-WAMBUI/spider-net-bill
 
-**Lovable (optional)**: https://lovable.dev/projects/89009f76-9e6e-4318-9d3a-693f06c8d70a
+## Local development
 
-## How can I edit this code?
+### Prerequisites
 
-There are several ways of editing your application.
+- Node.js 22 LTS (or use the repo’s portable Node on Windows—see [docs/WINDOWS_NODE_NPM_FIX.md](docs/WINDOWS_NODE_NPM_FIX.md))
+- PostgreSQL and Redis for the backend (see `backend/.env.example`)
 
-**Use Lovable**
+### Environment
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/89009f76-9e6e-4318-9d3a-693f06c8d70a) and start prompting.
+**Frontend** — copy `.env.local.example` to `.env.local` (do not commit `.env.local`):
 
-Changes made via Lovable will be committed automatically to this repo.
+```env
+VITE_API_URL=http://localhost:3000
+```
 
-**Use your preferred IDE**
+**Backend** — copy `backend/.env.example` to `backend/.env` (do not commit `backend/.env`). Set `DATABASE_URL`, `REDIS_URL`, JWT secrets, M-Pesa Daraja keys, and `FRONTEND_URL=http://localhost:5173`.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+### Install and run
 
 ```sh
-# Step 1: Clone the repository.
 git clone https://github.com/WILSON-MWANGI-WAMBUI/spider-net-bill.git
-
-# Step 2: Navigate to the project directory.
 cd spider-net-bill
+npm ci
+npm run backend:install
+```
 
-# Step 3: Install the necessary dependencies.
-npm i
+Terminal 1 — API:
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```sh
+npm run backend:dev
+```
+
+Terminal 2 — UI:
+
+```sh
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+On Windows, if `npm`/`node` PATH is broken, dot-source `scripts/session-path.ps1` or use `npm run dev:win` and `npm run backend:dev:win` (see Windows doc).
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Quality checks
 
-**Use GitHub Codespaces**
+```sh
+npm run lint
+npm run typecheck
+npm run backend:lint
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Stack
 
-## What technologies are used for this project?
+- **Frontend**: Vite, TypeScript, React, shadcn-ui, Tailwind CSS, TanStack Query, Zustand
+- **Backend**: NestJS, Prisma, PostgreSQL, Redis, M-Pesa Daraja
 
-This project is built with:
+## Optional: Lovable
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/89009f76-9e6e-4318-9d3a-693f06c8d70a) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+[Lovable project](https://lovable.dev/projects/89009f76-9e6e-4318-9d3a-693f06c8d70a) — deploy/publish from Lovable if you use that workflow.

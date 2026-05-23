@@ -1,19 +1,9 @@
-import { appStore } from "@/state/appState";
-import { useStore } from "@/state/store";
+import { useAppStore } from "@/state/appStore";
 
 export function useUser() {
-  return useStore(appStore, (s) => s.user);
+  return useAppStore((s) => s.user);
 }
 
-export function useBundle() {
-  return useStore(appStore, (s) => s.bundle);
+export function useDeviceLabels() {
+  return useAppStore((s) => s.deviceLabels);
 }
-
-export function useTransactions() {
-  return useStore(appStore, (s) => s.transactions);
-}
-
-export function useDevices() {
-  return useStore(appStore, (s) => s.devices);
-}
-

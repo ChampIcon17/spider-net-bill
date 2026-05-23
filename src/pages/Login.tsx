@@ -3,34 +3,23 @@ import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { SpiderLogo } from "@/components/SpiderLogo";
 import { login } from "@/controllers/appController";
 import { loginApi } from "@/services/backendApi";
+import { toE164 } from "@/lib/phone";
 
 const Login = () => {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const toE164 = (value: string): string => {
-    const cleaned = value.replace(/\s+/g, "");
-    if (cleaned.startsWith("+254")) return cleaned;
-    if (cleaned.startsWith("254")) return `+${cleaned}`;
-    if (cleaned.startsWith("0")) return `+254${cleaned.slice(1)}`;
-    return cleaned;
-  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!phone || !password) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Please fill in all fields" });
       return;
     }
 
@@ -39,20 +28,12 @@ const Login = () => {
     const isValidKePhone =
       /^07[0-9]{8}$/.test(cleaned) || /^\+2547[0-9]{8}$/.test(normalizedPhone);
     if (!isValidKePhone) {
-      toast({
-        title: "Error",
-        description: "Use a valid Kenyan number e.g. 0712345678",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Use a valid Kenyan number e.g. 0712345678" });
       return;
     }
 
     if (password.length < 8) {
-      toast({
-        title: "Error",
-        description: "Password must be at least 8 characters",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Password must be at least 8 characters" });
       return;
     }
 
@@ -61,17 +42,12 @@ const Login = () => {
     try {
       const user = await loginApi(normalizedPhone, password);
       login({ id: user.id, phone: user.phone, name: user.name ?? undefined, role: user.role });
-      toast({
-        title: "Welcome to SPIDER",
-        description: "Login successful!",
-      });
+      toast.success("Welcome to SPIDER", { description: "Login successful!" });
       navigate("/dashboard");
     } catch (error) {
       const err = error as { statusCode?: number; message?: string };
-      toast({
-        title: "Login failed",
+      toast.error("Login failed", {
         description: err.message ?? "Unable to login right now",
-        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
