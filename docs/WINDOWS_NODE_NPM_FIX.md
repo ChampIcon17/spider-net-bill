@@ -126,3 +126,47 @@ npm run lint
 ```
 
 Frontend env: copy `.env.local.example` to `.env.local` and set `VITE_API_URL` (see root `README.md`). Backend: copy `backend/.env.example` to `backend/.env` (never commit `.env`).
+
+## Tailwind CSS IntelliSense (`bradlc.vscode-tailwindcss`)
+
+### Open the correct workspace folder
+
+In Cursor/VS Code use **File → Open Folder** and choose `spider-net-bill-main` (the folder that contains `tailwind.config.ts` and `package.json`), not a parent like `Desktop`. Install the recommended extension from `.vscode/extensions.json` if prompted, then **Developer: Reload Window**.
+
+### Typical log messages
+
+| Message | Meaning |
+|--------|---------|
+| `No matching project for document` on `backend/src/...` | Normal — the NestJS backend does not use Tailwind. IntelliSense applies under `src/` for the Vite app. |
+| `Can't resolve 'tailwindcss/package.json'` | Broken or incomplete `node_modules` (common on **OneDrive** when packages are cloud-only placeholders). |
+| `Can't resolve 'tailwindcss-animate'` | Same — plugin folder exists but entry files are missing. |
+| `Failed to load workspace modules` / `Using bundled version` | Extension fell back to its bundled Tailwind; your `tailwind.config.ts` plugins may not load until `node_modules` is fixed. |
+| `Server was not started. Search for Tailwind CSS-related files was taking too long` | First start on a large tree; usually clears after reload once `node_modules` is healthy. |
+
+### Fix corrupted `node_modules`
+
+From the repo root (after `.\scripts\session-path.ps1` or a working `node`/`npm` on PATH):
+
+```powershell
+cd C:\Users\USER\OneDrive\Desktop\spider-net-bill-main
+Test-Path .\node_modules\tailwindcss\package.json   # should be True
+```
+
+If it is **False**, reinstall dependencies:
+
+```powershell
+. .\scripts\session-path.ps1
+Remove-Item -Recurse -Force .\node_modules -ErrorAction SilentlyContinue
+npm ci
+```
+
+If `npm ci` fails with `ENOTEMPTY` on OneDrive, pause OneDrive sync for this folder, delete `node_modules` again, retry `npm ci`, or clone the repo outside OneDrive (for example `C:\dev\spider-net-bill-main`). Mark the project folder **Always keep on this device** so `node_modules` is not online-only.
+
+Verify:
+
+```powershell
+Test-Path .\node_modules\tailwindcss\package.json
+Test-Path .\node_modules\tailwindcss-animate\index.js
+```
+
+Then reload the editor window. This repo sets `tailwindCSS.experimental.configFile` in `.vscode/settings.json` so the extension always uses `tailwind.config.ts` at the workspace root.

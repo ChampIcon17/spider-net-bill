@@ -3,5 +3,16 @@
     "Path": "${env:LOCALAPPDATA}\\spider-net-bill-tools\\node-v22.14.0-win-x64;C:\\Program Files\\Git\\bin;C:\\Program Files\\nodejs;${env:Path}"
   },
   "css.lint.unknownAtRules": "ignore",
-  "scss.lint.unknownAtRules": "ignore"
+  "scss.lint.unknownAtRules": "ignore",
+  "tailwindCSS.experimental.configFile": "tailwind.config.ts",
+  "tailwindCSS.includeLanguages": {
+    "typescript": "javascript",
+    "typescriptreact": "javascript"
+  },
+  "tailwindCSS.files.exclude": [
+    "**/backend/**"
+  ],
+  "files.watcherExclude": {
+    "**/backend/node_modules/**": true
+  }
 }
