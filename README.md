@@ -1,26 +1,18 @@
-﻿# SPIDER — Wi‑Fi billing (frontend + backend)
+﻿# SPIDER — Wi‑Fi billing
 
-React (Vite) dashboard that talks to a **NestJS** API (`backend/`). Plans, devices, M-Pesa payments, and sessions are loaded from the API via React Query hooks—not client-side mock billing services.
+React (Vite) frontend and NestJS API for plans, devices, M-Pesa payments, and sessions.
 
-GitHub: https://github.com/WILSON-MWANGI-WAMBUI/spider-net-bill
+https://github.com/WILSON-MWANGI-WAMBUI/spider-net-bill
 
- Local development
- Prerequisites
+## Prerequisites
 
-- Node.js 22 LTS (or use the repo’s portable Node on Windows—see [docs/WINDOWS_NODE_NPM_FIX.md](docs/WINDOWS_NODE_NPM_FIX.md))
-- PostgreSQL and Redis for the backend (see `backend/.env.example`)
+- Node.js 22 LTS
+- PostgreSQL and Redis
+- [Safaricom Daraja](https://developer.safaricom.co.ke) credentials (sandbox or production)
 
-Environment
+Windows PATH issues: [docs/WINDOWS_NODE_NPM_FIX.md](docs/WINDOWS_NODE_NPM_FIX.md)
 
-Frontend — copy `.env.local.example` to `.env.local` (do not commit `.env.local`):
-
-```env
-VITE_API_URL=http://localhost:3000
-```
-
-Backend — copy `backend/.env.example` to `backend/.env` (do not commit `backend/.env`). Set `DATABASE_URL`, `REDIS_URL`, JWT secrets, M-Pesa Daraja keys, and `FRONTEND_URL=http://localhost:5173`.
-
-Install and run
+## Setup
 
 ```sh
 git clone https://github.com/WILSON-MWANGI-WAMBUI/spider-net-bill.git
@@ -29,31 +21,39 @@ npm ci
 npm run backend:install
 ```
 
-Terminal 1 — API:
+**Frontend** — `.env.local.example` → `.env.local`:
 
-```sh
-npm run backend:dev
+```env
+VITE_API_URL=http://localhost:3000
 ```
 
-Terminal 2 — UI:
+**Backend** — `backend/.env.example` → `backend/.env`, `backend/.env.mpesa.example` → `backend/.env.mpesa`. Do not commit `.env` or `.env.mpesa`.
+
+| File | Variables |
+|------|-----------|
+| `backend/.env` | `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `FRONTEND_URL` |
+| `backend/.env.mpesa` | `MPESA_*`, `DARAJA_*` |
+
+Set `FRONTEND_URL` to your Vite origin (default `http://localhost:8080`). M-Pesa callback: `https://<host>/api/v1/payments/webhook`.
+
+## Run
 
 ```sh
-npm run dev
+npm run backend:dev   # API :3000
+npm run dev           # UI :8080
 ```
 
-On Windows, if `npm`/`node` PATH is broken, dot-source `scripts/session-path.ps1` or use `npm run dev:win` and `npm run backend:dev:win` (see Windows doc).
+Windows: `npm run backend:dev:win` / `npm run dev:win` if `npm` is not on PATH.
 
-Quality checks
+## Scripts
 
-```sh
-npm run lint
-npm run typecheck
-npm run backend:lint
-```
+| Command | Description |
+|---------|-------------|
+| `npm run lint` | Frontend ESLint |
+| `npm run typecheck` | Frontend TypeScript |
+| `npm run build` | Frontend production build |
+| `npm run backend:lint` | Backend ESLint |
 
- Stack
+## Stack
 
-- **Frontend**: Vite, TypeScript, React, shadcn-ui, Tailwind CSS, TanStack Query, Zustand
-- **Backend**: NestJS, Prisma, PostgreSQL, Redis, M-Pesa Daraja
-
-
+Vite · React · TypeScript · TanStack Query · Zustand · shadcn-ui · Tailwind · NestJS · Prisma · PostgreSQL · Redis · M-Pesa Daraja

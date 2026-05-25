@@ -1,5 +1,34 @@
 import * as Joi from "joi";
 
+/** Safaricom Daraja sandbox Lipa Na M-Pesa Online test credentials. */
+export const MPESA_SANDBOX_SHORTCODE = "174379";
+export const MPESA_SANDBOX_PASSKEY =
+  "bfb279f9aa9bdbcf158e97dd1a267de58e53ed1aa32540bccb6ef878f04be06f";
+
+function isBlank(value: unknown): boolean {
+  return value == null || (typeof value === "string" && value.trim() === "");
+}
+
+/** Fill standard sandbox values when MPESA_* are empty (override in .env.mpesa if STK fails). */
+export function applyMpesaSandboxDefaults(config: Record<string, unknown>): Record<string, unknown> {
+  if (config.MPESA_ENV !== "sandbox") {
+    return config;
+  }
+
+  const next = { ...config };
+  if (isBlank(next.MPESA_SHORTCODE)) {
+    next.MPESA_SHORTCODE = MPESA_SANDBOX_SHORTCODE;
+  }
+  if (isBlank(next.MPESA_PASSKEY)) {
+    next.MPESA_PASSKEY = MPESA_SANDBOX_PASSKEY;
+  }
+  if (isBlank(next.MPESA_CALLBACK_URL)) {
+    const port = next.PORT ?? 3000;
+    next.MPESA_CALLBACK_URL = `http://localhost:${port}/api/v1/payments/webhook`;
+  }
+  return next;
+}
+
 export const validationSchema = Joi.object({
   NODE_ENV: Joi.string().valid("development", "production", "test").default("development"),
   PORT: Joi.number().default(3000),
@@ -29,7 +58,8 @@ export const validationSchema = Joi.object({
 
 /** Used by ConfigModule `validate` — fail-fast on boot with a readable error. */
 export function validateEnv(config: Record<string, unknown>): Record<string, unknown> {
-  const v = validationSchema.validate(config, {
+  const withMpesaDefaults = applyMpesaSandboxDefaults(config);
+  const v = validationSchema.validate(withMpesaDefaults, {
     allowUnknown: true,
     stripUnknown: true,
   });

@@ -21,6 +21,7 @@ import { RedisThrottlerStorage } from "./redis/redis-throttler.storage";
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: [".env", ".env.mpesa"],
       validate: validateEnv,
     }),
     ThrottlerModule.forRootAsync({
